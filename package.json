@@ -1,15 +1,18 @@
 {
   "name": "reinvent-voice-agent-starter",
   "version": "1.0.0",
-  "description": "A voice agent in one small Node server and one page: Flux listens, Think-Fast replies, Flux TTS speaks, on Deepgram's Voice Agent API.",
+  "description": "Deepgram's re:Invent booth voice agent: a booth screen, an operator console and a small Node server on the Voice Agent API.",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=20.6" },
+  "engines": {
+    "node": ">=22.9"
+  },
   "scripts": {
-    "start": "node --env-file=.env server.js",
+    "start": "node --env-file-if-exists=.env server.js",
     "test": "node --test"
   },
   "dependencies": {
-    "ws": "8.18.3"
+    "qrcode": "1.5.4",
+    "ws": "8.22.1"
   }
 }

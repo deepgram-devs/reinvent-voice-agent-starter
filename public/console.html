@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Booth console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#121014; --card:#1d1a21; --edge:#2e2a34; --fg:#f4f1f6; --muted:#a39dab; --green:#13ef93; --magenta:#e04ef0;
+          --sans:"Work Sans",system-ui,sans-serif; --mono:"Azeret Mono",ui-monospace,monospace; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 var(--sans); padding:16px; }
+  main { max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:14px; }
+  header { display:flex; align-items:center; gap:14px; }
+  #num { font:700 44px/1 var(--sans); color:var(--magenta); min-width:1ch; }
+  header h1 { margin:0; font-size:22px; }
+  #sub { color:var(--muted); font:13px var(--mono); }
+  header form { margin-left:auto; display:flex; gap:6px; }
+  header input { width:64px; }
+  section { background:var(--card); border:1px solid var(--edge); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; }
+  h2 { margin:0; font:600 12px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .row { display:flex; gap:10px; }
+  .row > * { flex:1; }
+  button, select, input { font:600 16px var(--sans); border-radius:12px; border:1px solid var(--edge); background:#26222b; color:var(--fg); padding:14px; }
+  input, select { font-weight:400; }
+  button { cursor:pointer; }
+  button:disabled { opacity:.35; cursor:default; }
+  button.go { background:var(--green); color:#04140c; border-color:var(--green); }
+  button.wrap { background:var(--magenta); color:#fff; border-color:var(--magenta); }
+  button.on { outline:2px solid var(--green); }
+  label { color:var(--muted); font-size:13px; }
+  #log { display:flex; flex-direction:column; gap:6px; max-height:46vh; overflow:auto; }
+  .line { padding:8px 12px; border-radius:10px; background:#26222b; }
+  .line b { display:block; font:600 11px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .line.agent b { color:#c48cff; } .line.user b { color:var(--green); }
+  .line.tool, .line.event { background:transparent; border:1px dashed var(--edge); color:var(--muted); font-size:13px; }
+  #pass { display:none; }
+  #pass.show { display:flex; }
+  .err { color:#ff7a8a; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div id="num">1</div>
+    <div><h1 id="title">Connecting</h1><div id="sub">booth console</div></div>
+    <form id="switch"><input id="boothin" aria-label="Booth" placeholder="booth"><button>Go</button></form>
+  </header>
+
+  <section id="pass">
+    <h2>Passcode</h2>
+    <div class="err" id="passerr">This booth needs a passcode.</div>
+    <div class="row"><input id="passin" type="password" placeholder="Booth passcode" autocomplete="current-password"><button id="passgo">Unlock</button></div>
+  </section>
+
+  <section>
+    <h2>Conversation</h2>
+    <label for="role">Who is at the booth</label>
+    <select id="role"></select>
+    <div class="row"><button class="go" id="start">Start</button><button id="stop">End</button></div>
+    <button class="wrap" id="wrap">Wrap up</button>
+  </section>
+
+  <section>
+    <h2>Code</h2>
+    <button id="qr">Show the code QR</button>
+  </section>
+
+  <section>
+    <h2>Transcript</h2>
+    <div id="log" aria-live="polite"></div>
+  </section>
+</main>
+<script type="module" src="console.js"></script>
+</body>
+</html>

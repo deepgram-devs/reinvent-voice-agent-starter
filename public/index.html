@@ -3,37 +3,114 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Voice agent starter</title>
+<title>Voice agent booth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#0b0b0c; --panel:#16161a; --text:#fcfaf8; --muted:#9a98a0; --accent:#13ef93; --agent:#a78bfa; }
-  * { box-sizing: border-box; }
-  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font:16px/1.5 system-ui, sans-serif;
-         display:flex; flex-direction:column; align-items:center; padding:48px 16px; gap:24px; }
-  h1 { margin:0; font-size:28px; font-weight:600; }
-  p.lead { margin:0; color:var(--muted); text-align:center; max-width:520px; }
-  #dot { width:120px; height:120px; border-radius:50%; background:var(--panel); border:2px solid #2a2a30;
-         transition:transform .15s, border-color .15s, box-shadow .15s; }
-  body[data-state="listening"] #dot { border-color:var(--accent); box-shadow:0 0 32px #13ef9333; }
-  body[data-state="user"] #dot { border-color:var(--accent); transform:scale(1.08); box-shadow:0 0 48px #13ef9366; }
-  body[data-state="agent"] #dot { border-color:var(--agent); transform:scale(1.08); box-shadow:0 0 48px #a78bfa66; }
-  #state { color:var(--muted); font-size:14px; min-height:1.5em; }
-  button { font:600 16px system-ui; padding:12px 28px; border-radius:999px; border:0; cursor:pointer;
-           background:var(--accent); color:#000; }
-  button.stop { background:#2a2a30; color:var(--text); }
-  #log { width:100%; max-width:640px; display:flex; flex-direction:column; gap:8px; }
-  .line { padding:10px 14px; border-radius:12px; background:var(--panel); }
-  .line b { display:block; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
-  .line.agent b { color:var(--agent); } .line.user b { color:var(--accent); }
+  :root { --fg:#fcfaf8; --muted:rgba(252,250,248,.68); --green:#13ef93; --violet:#c48cff; --magenta:#ee028c;
+          --sans:"Work Sans",system-ui,sans-serif; --mono:"Azeret Mono",ui-monospace,monospace; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; overflow:hidden; }
+  body { background:linear-gradient(180deg, #140b1d 0%, #3d2154 45%, #7a4f8c 100%); color:var(--fg); font:16px/1.5 var(--sans); }
+  #logo { position:fixed; top:26px; left:32px; font:700 24px var(--sans); letter-spacing:-.01em; }
+  #logo span { font-weight:400; color:var(--muted); }
+  #state { position:fixed; top:28px; right:32px; padding:6px 14px; border-radius:999px; background:rgba(0,0,0,.28);
+           font:500 13px var(--mono); letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+  #state::before { content:""; display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; background:#777; vertical-align:1px; }
+  body[data-state="listening"] #state::before, body[data-state="user"] #state::before { background:var(--green); }
+  body[data-state="agent"] #state::before { background:var(--violet); }
+  body[data-state="thinking"] #state::before { background:var(--magenta); }
+
+  #cc { position:fixed; left:50%; top:50%; transform:translate(-50%, -50%); width:min(86vw, 1100px); text-align:center;
+        display:flex; flex-direction:column; gap:10px; pointer-events:none; text-shadow:0 2px 8px rgba(0,0,0,.45); }
+  #cc p { margin:0; transition:opacity .4s; }
+  #cc .user { font-size:clamp(20px, 2.6vw, 34px); color:var(--muted); }
+  #cc .agent { font-size:clamp(28px, 4vw, 56px); font-weight:500; line-height:1.25; }
+  #cc .gone { opacity:0; }
+  body[data-qr="on"] #cc { left:30%; width:min(52vw, 700px); }
+  /* With no conversation running, the middle of the screen says what this is. */
+  #hello { position:fixed; left:50%; top:50%; transform:translate(-50%, -50%); margin:0; width:min(86vw, 900px);
+           text-align:center; font-size:clamp(32px, 5vw, 72px); line-height:1.1; font-weight:700; transition:opacity .4s; }
+  body[data-call="on"] #hello, body[data-qr="on"] #hello { opacity:0; }
+
+  /* The code card: shown by the developer close (show_code), or by the console's Show code button. */
+  #code { position:fixed; right:6vw; top:50%; width:min(38vw, 600px); display:grid; grid-template-columns:auto 1fr;
+          gap:24px; align-items:center; padding:26px; border-radius:22px; background:#fff; color:#17121c;
+          box-shadow:0 24px 70px rgba(0,0,0,.4); opacity:0; pointer-events:none; transform:translateY(-44%);
+          transition:opacity .5s, transform .5s; }
+  body[data-qr="on"] #code { opacity:1; transform:translateY(-50%); pointer-events:auto; }
+  #code img { width:min(14vw, 220px); aspect-ratio:1; }
+  #code .kicker { font:600 12px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:#7a4f8c; }
+  #code h2 { margin:6px 0 10px; font-size:clamp(22px, 2.2vw, 34px); line-height:1.15; }
+  #code p { margin:0 0 12px; color:#4a4450; }
+  #code .url { font:500 clamp(11px, .9vw, 14px) var(--mono); color:#17121c; overflow-wrap:anywhere; }
+
+  /* Before the first click: the browser needs one click on the page before it can use the mic and the speaker. */
+  #setup { position:fixed; inset:0; display:grid; place-items:center; background:rgba(10,6,14,.82); z-index:5; }
+  #setup .card { width:min(92vw, 460px); padding:28px; border-radius:20px; background:#1c1424; border:1px solid rgba(255,255,255,.1); text-align:center; }
+  .label { font:600 12px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  #setup h1 { margin:6px 0 8px; font-size:26px; }
+  #setup p { margin:0 0 18px; color:var(--muted); }
+  #setup input { width:100%; margin-bottom:12px; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.2); background:#0f0a14; color:var(--fg); font:16px var(--mono); }
+  #setup .err { color:#ff7a8a; min-height:1.4em; margin-bottom:8px; }
+  button { font:600 16px var(--sans); padding:12px 26px; border-radius:999px; border:0; cursor:pointer; background:var(--green); color:#04140c; }
+  button.ghost { background:rgba(255,255,255,.1); color:var(--fg); }
+  button:disabled { opacity:.4; cursor:default; }
+
+  /* The bottom bar: run the booth without a console. It hides itself during a conversation. */
+  #bar { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); display:flex; gap:10px; align-items:center;
+         padding:8px 8px 8px 18px; border-radius:999px; background:rgba(0,0,0,.35); font:13px var(--mono); color:var(--muted);
+         transition:opacity .4s; z-index:2; white-space:nowrap; }
+  #bar button { padding:8px 18px; font-size:14px; }
+  body[data-call="on"] #bar { opacity:0; pointer-events:none; }
+  body[data-call="on"] #bar:hover, body[data-call="on"] #bar:focus-within { opacity:1; pointer-events:auto; }
+  #bar a { color:var(--muted); }
+  .hidden { display:none !important; }
+  @media (max-width: 700px) {
+    #logo { top:18px; left:16px; font-size:18px; }
+    #logo span { display:none; }
+    #state { top:16px; right:16px; font-size:11px; }
+    #code { left:16px; right:16px; width:auto; grid-template-columns:1fr; justify-items:center; text-align:center; }
+    body[data-qr="on"] #cc { display:none; }
+    #code img { width:44vw; }
+    #bar .hint { display:none; }
+  }
 </style>
 </head>
-<body data-state="idle">
-  <h1>Voice agent starter</h1>
-  <p class="lead">Flux listens, Think-Fast replies, Flux TTS speaks, all on Deepgram's Voice Agent API.
-    Pause mid-sentence and it waits. Talk over it and it stops.</p>
-  <div id="dot"></div>
-  <div id="state">Press Start and allow the microphone.</div>
-  <button id="go">Start</button>
-  <div id="log"></div>
-  <script type="module" src="app.js"></script>
+<body data-state="idle" data-call="off" data-qr="off">
+  <div id="logo">Deepgram <span>Voice Agent</span></div>
+  <div id="state">Waiting</div>
+  <h1 id="hello">Talk to a voice agent</h1>
+  <div id="cc" aria-live="polite"><p class="user gone" id="ccuser"></p><p class="agent gone" id="ccagent"></p></div>
+
+  <div id="code">
+    <img src="/qr.svg" alt="QR code that opens the source code">
+    <div>
+      <div class="kicker">Take it home</div>
+      <h2>Run this agent yourself</h2>
+      <p>Scan with your phone for the code. Add your Deepgram key and it runs.</p>
+      <div class="url" id="qrurl"></div>
+    </div>
+  </div>
+
+  <div id="setup">
+    <div class="card">
+      <div class="label" id="setupbooth">Booth 1</div>
+      <h1>Set up this booth</h1>
+      <p>Click once so this page can use the microphone and the speaker. Then start from here, or from the console on your phone.</p>
+      <input id="pass" class="hidden" type="password" placeholder="Booth passcode" autocomplete="current-password">
+      <div class="err" id="err" role="alert"></div>
+      <button id="arm">Set up</button>
+    </div>
+  </div>
+
+  <div id="bar">
+    <span id="who">Booth 1</span>
+    <span class="hint">· console: <a id="consolelink" href="/console" target="_blank">/console</a></span>
+    <button id="go" disabled>Start</button>
+  </div>
+
+  <script type="module" src="stand.js"></script>
 </body>
 </html>
