@@ -62,7 +62,7 @@ async def test_prompt_update_keeps_one_system_message_and_history():
     await call.command({"type": "UpdatePrompt", "prompt": "Say goodbye"})
     messages = call.context.get_messages()
     assert len(messages) == 2
-    assert messages[0]["content"] == "Identity\n\nSay goodbye"
+    assert messages[0]["content"] == "Say goodbye"
     assert ws.events == [{"type": "PromptUpdated"}]
     await call.command({"type": "InjectUserMessage", "content": "[operator] wrap"})
     assert call.worker.queue_frame.call_args.args[0].run_llm
@@ -137,3 +137,43 @@ async def test_real_pipeline_lifecycle_with_fake_audio_services(monkeypatch):
         ws.closed = True
         await call.close()
     assert call.runner_task.done()
+
+
+@pytest.mark.asyncio
+async def test_business_function_result_returns_through_shared_booth_handler():
+    ws = Socket()
+    call = agent.Conversation(ws)
+    result = AsyncMock()
+    params = SimpleNamespace(tool_call_id="lookup-1", function_name="get_service_status",
+                             arguments={"area": "north"}, result_callback=result)
+    job = asyncio.create_task(call.tool(params))
+    try:
+        await asyncio.sleep(0)
+        request = ws.events[0]["functions"][0]
+        assert request["arguments"] == {"area": "north"}
+        content = '{"sample_data":true,"area":"north","status":"fictional"}'
+        await call.command({"type": "FunctionCallResponse", "id": "lookup-1", "content": content})
+        await asyncio.wait_for(job, 1)
+        assert result.call_args.args[0] == content
+        assert result.call_args.kwargs["properties"].run_llm is True
+        assert not call.pending_tools
+    finally:
+        if not job.done():
+            job.cancel()
+            await asyncio.gather(job, return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_interrupted_tool_cancels_shared_handler():
+    ws = Socket()
+    call = agent.Conversation(ws)
+    result = AsyncMock()
+    params = SimpleNamespace(tool_call_id="lookup-cancel", function_name="get_service_status",
+                             arguments={"area": "north"}, result_callback=result)
+    job = asyncio.create_task(call.tool(params))
+    await asyncio.sleep(0)
+    job.cancel()
+    await asyncio.gather(job, return_exceptions=True)
+    assert ws.events[-1] == {"type": "FunctionCallCancelled", "functions": [{"id": "lookup-cancel"}]}
+    assert not call.pending_tools
+    result.assert_not_called()

@@ -1,102 +1,201 @@
 # Deepgram Voice Agent Starter
 
-Build a browser voice agent with **Deepgram Voice Agent API** or **Pipecat**.
-Both implementations share a microphone and speaker interface, live captions,
-an operator console, and an editable agent configuration.
+Take the voice experience from Deepgram's re:Invent booth and tailor it to your project. This starter uses the same
+**Python + asyncio + aiohttp** approach for its server, and the core voice flow, with either the managed Deepgram Voice Agent API or a local Pipecat pipeline:
 
-Originally built for Deepgram's AWS re:Invent booth. Adapt the prompt and tools
-for your own application.
+**microphone → Flux speech-to-text → Think-Fast → Flux text-to-speech → speaker**
 
-[Quick start](#quick-start) · [Pipecat setup](docs/pipecat.md) · [Configuration](docs/configuration.md) · [Architecture](docs/architecture.md) · [Contributing](CONTRIBUTING.md)
+The browser page captures audio and displays subtitles. An optional phone/tablet console starts, finishes or
+immediately stops a conversation and shows the starter QR. Browser audio uses JavaScript; **no Node.js installation
+or JavaScript build step is needed**.
 
-## Choose an implementation
+The live conference booth has additional orchestration, a graph and documentation tools. Start here to build your
+own voice task with the same core APIs; add the integrations your product needs.
 
-| | Deepgram Voice Agent API | Pipecat |
-|---|---|---|
-| Set `VOICE_BACKEND` | `deepgram` (default) | `pipecat` |
-| Runtime | Node.js | Node.js + Python sidecar |
-| Orchestration | Managed by Deepgram | Python pipeline you control |
-| Speech recognition | Deepgram Flux | Deepgram Flux |
-| Language model | Think-Fast, or a configured Deepgram-managed model | Direct Think-Fast endpoint |
-| Speech synthesis | Deepgram Flux TTS | Deepgram Flux TTS |
-| Setup | [Quick start below](#quick-start) | [Pipecat guide](docs/pipecat.md) |
+## Choose your implementation
 
-Think-Fast is Early Access and requires project access. The Pipecat adapter's
-direct Think-Fast access must be verified separately. The Pipecat implementation
-has offline tests but still needs a real conversation before event use.
+| Backend | Set `VOICE_BACKEND` | Runtime | Reply model |
+|---|---|---|---|
+| Deepgram Voice Agent API (default) | `deepgram` | Python aiohttp server | Think-Fast or a configured managed model |
+| Pipecat | `pipecat` | Python aiohttp server + local Python pipeline | Direct Think-Fast endpoint |
 
-## Quick start
+Both use the same browser interface, console, Python configuration and business
+function handlers. Start with the default below, or follow the [Pipecat setup](docs/pipecat.md).
+Pipecat is experimental until direct model access and a real conversation are verified.
 
-You need **Node.js 22.9+**, npm, a modern browser with microphone access, and a
-[Deepgram API key](https://console.deepgram.com/).
+[Configuration](docs/configuration.md) · [Architecture](docs/architecture.md) ·
+[Deployment](docs/deployment.md) · [Troubleshooting](docs/troubleshooting.md) ·
+[Contributing](CONTRIBUTING.md)
 
-```sh
+## Run it
+
+Install [Python 3.11 or newer](https://www.python.org/downloads/) and
+[uv](https://docs.astral.sh/uv/getting-started/installation/).
+Get a [Deepgram API key](https://console.deepgram.com/).
+
+~~~sh
 git clone https://github.com/deepgram-devs/reinvent-voice-agent-starter.git
 cd reinvent-voice-agent-starter
-npm ci
 cp .env.example .env
-```
+# Set DEEPGRAM_API_KEY in .env, then:
+uv run python server.py
+~~~
 
-Set your key in `.env`:
+"uv run" creates a virtual environment and installs the locked dependencies.
 
-```dotenv
-DEEPGRAM_API_KEY=your-key
-VOICE_BACKEND=deepgram
-```
+1. Open **http://localhost:3000** and click **Set up** to allow the microphone and speaker.
+2. Press **Start** and talk to the agent. Use headphones when your speaker is near the mic.
+3. Optional: open **http://localhost:3000/console** for the operator controls.
 
-```sh
-npm start
-```
+**Model access:** the defaults match the booth: flux-general-en, think-fast, and flux-alexis-en.
+Availability depends on your Deepgram project. If Think-Fast is unavailable for your key, set a supported managed
+LLM in .env, for example THINK_PROVIDER=open_ai and THINK_MODEL=gpt-4o-mini, then restart. This changes only the
+reply model; your key also needs access to the configured speech models. See the
+[current model configuration docs](https://developers.deepgram.com/docs/llm/voice-agent).
 
-1. Open [localhost:3000](http://localhost:3000), click **Set up** and allow the microphone.
-2. Press **Start** and speak. Use headphones during initial testing.
-3. Optionally open [localhost:3000/console](http://localhost:3000/console) to control the same conversation.
+## Tailor it to your idea
 
-If Think-Fast is unavailable to your project, the **Voice Agent API** backend can
-use a Deepgram-managed model by setting:
+Start with one task your agent should do well.
 
-```dotenv
-THINK_PROVIDER=open_ai
-THINK_MODEL=gpt-4o-mini
-```
+### 1. Give it a job
 
-This fallback is not implemented in the Pipecat backend. Requests use your
-provider account and may incur charges.
+Edit **agent_config.py**:
 
-## Make it yours
+- PROMPT: describe the job, what the agent should ask, and what it must not promise.
+- GREETING: write its opening sentence.
+- settings(): choose the speech and reply models and audio formats.
 
-Start in [`agent.config.js`](agent.config.js):
+For a telecom support idea, start with an agent that asks which service area is affected and explains the result
+of a status lookup. For another product, replace that task with your own. Restart after editing Python files.
 
-- Change `PROMPT` and `GREETING` to define the agent's job and first words.
-- Edit `ROLES` to change the optional visitor briefs shown on the console.
-- Add function schemas to `FUNCTIONS` and implement handlers for each backend you use.
-- Set `VOICE` in `.env` to an available Flux TTS voice.
-- Set `REPO_URL` to your fork to update the on-screen QR code.
+### 2. Connect one useful business function
 
-The starter includes `show_code` and `end_call`. Your own integrations—bookings,
-orders, customer records or other actions—need application handlers.
-See [architecture and customization](docs/architecture.md).
+**functions.py** contains a working, read-only example: **get_service_status**.
 
-## Run a booth
+Say: **“Can you check the example service status for the north area?”**
+
+The model requests that function; Python validates its arguments, reads the example data and returns a result.
+The agent should label the result as **fictional sample data**. It is not connected to a telecom provider.
+
+To connect your actual system:
+
+1. Replace the sample lookup with an awaited call to your own authorized backend.
+2. Return only the fields the agent is allowed to explain. Keep credentials on the server in .env.
+3. Update the schema in DEFINITIONS and register its async handler in HANDLERS.
+4. Update PROMPT for your actual task and test success, invalid input, missing records and service failures.
+
+The Voice Agent API sends FunctionCallRequest. In **booth.py**, function() calls a registered Python handler
+and sends FunctionCallResponse with **type, id, name, content**. Content is a JSON-encoded string; an optional
+thought signature is echoed back. Only client_side: true requests are executed here. “Client” in the
+Deepgram docs means this Python application connected to Deepgram, not necessarily browser JavaScript.
+
+Functions run as separate async tasks, so a slow lookup does not block audio or Stop now. Cancelled calls receive
+no late response. Definitions use defer_until_eot to avoid starting work on an unfinished user turn; future
+actions that change data still need your own authorization and idempotency rules.
+
+See [function requests](https://developers.deepgram.com/docs/voice-agent-function-call-request),
+[responses](https://developers.deepgram.com/docs/voice-agent-function-call-response), and
+[cancellation](https://developers.deepgram.com/docs/voice-agent-function-call-cancelled).
+
+### 3. Try your workflow
+
+- “I’m building a customer support agent.”
+- “Check the example service status for the north area.”
+- Interrupt the reply and change the area to central.
+- “Show me the starter code.” The QR appears and the conversation continues.
+- Press **Finish** for one short goodbye, or **Stop now** to cut the call immediately.
+
+The starter has no phone line, CRM, account permissions or production customer data attached. Add those integrations
+for your project. For a phone channel, start with the
+[Twilio integration guide](https://developers.deepgram.com/docs/voice-agent-twilio-integration).
+
+## Files
+
+| File | What to customize or learn |
+|---|---|
+| agent_config.py | Prompt, greeting, model configuration and function definitions. **Start here.** |
+| functions.py | Async business-function example and handler registry. Replace the sample data here. |
+| booth.py | One call: audio relay, function dispatch/cancellation, barge-in, QR and bounded closing. |
+| server.py | aiohttp pages/WebSockets, passcode checks and the server-side API connection. |
+| public/stand.js, index.html, mic-worklet.js | Browser microphone, audio playback, subtitles and QR. |
+| public/console.js, console.html | Phone/tablet operator console. |
+| pyproject.toml, uv.lock | Python dependencies and reproducible setup. |
+
+~~~text
+Browser microphone -- PCM16 16 kHz --> Python server --> Deepgram Voice Agent API
+Browser speaker    <- PCM16 24 kHz --- Python server <-- audio + JSON events
+                                           |
+Console -- Start / Finish / Stop / QR -------+
+                                           +-- functions.py -- your backend
+~~~
+
+Like the live booth, the Python server owns the upstream WebSocket and keeps the API key out of the browser.
+The default backend lets Deepgram manage the Think-Fast invocation. The optional Pipecat backend calls Think-Fast directly. The conference booth additionally uses its
+own Python think endpoint for orchestration; this starter does not reproduce the booth's entire application.
+
+## Console and closing
+
+Set BOOTH_PASSCODE in .env before opening the console on your phone, tablet or another computer. Restart, then
+open http://YOUR-LAPTOP-ADDRESS:3000/console. The booth's microphone page must use localhost or HTTPS; use HTTPS
+when the microphone runs on a remote device. Both pages enter the same passcode.
 
 | Control | Behavior |
 |---|---|
-| Start / End | Start a conversation or stop it immediately. |
-| Who is at the booth | Choose an optional role before starting. |
-| Wrap up | Ask the agent to close, then wait for the goodbye audio to finish. |
-| Show the code QR | Show or hide a link to the source repository. |
+| **Start** | Starts once the booth screen has allowed its microphone and speaker. No guest or role selection. |
+| **Finish** | Requests one short goodbye, then ends after the screen finishes playback. Maximum 12 seconds from the press. |
+| **Stop now** | Stops the call and queued playback immediately. No goodbye or confirmation dialog. |
+| **Show the code QR** | Shows/hides the repository QR independently; subtitles remain visible. |
 
-The developer role's closing flow asks whether the visitor wants to build an agent;
-a yes shows the QR. Add `?booth=2` to **both** pages to run another booth.
-Booths and conversation state live in one server's memory.
+Finish updates the prompt and, once quiet, sends one hidden closing cue. An end_call function starts playback
+draining; the browser reports drained. The server closes the API socket instead of sending a function response
+that would invite another spoken reply. A hard deadline handles missing model or browser acknowledgments.
 
-## Development
+For separate booths, add the same ?booth=2 to both pages. Each booth has one stand and one call. A replacement
+stand ends the old call. Conversation text is kept only in memory during the active call for consoles joining late;
+it is cleared when the call ends. Audio and transcripts are never recorded to disk.
 
-```sh
-npm run check
-```
+## Put it online
 
-For Pipecat checks (no API key or live provider calls required):
+~~~sh
+docker build -t python-voice-agent .
+docker run --rm -p 8080:8080 --env-file .env -e BOOTH_PASSCODE=choose-a-passcode python-voice-agent
+~~~
+
+Set DEEPGRAM_API_KEY and BOOTH_PASSCODE as secrets on your host. Use HTTPS and one server instance: active calls
+live in memory. Without a passcode the server binds only to 127.0.0.1, so a container without a passcode is not
+accessible through its published port. The passcode protects the API WebSockets; the UI and QR assets are public.
+For a public deployment, add your application's authentication, abuse controls and authorization.
+
+## Settings
+
+| Variable | Default | Purpose |
+|---|---|---|
+| DEEPGRAM_API_KEY | required | Server-side Deepgram credentials. |
+| BOOTH_PASSCODE | none | Protect control/agent sockets and allow network/container access. |
+| THINK_PROVIDER, THINK_MODEL | deepgram, think-fast | Reply provider/model available to your project. |
+| VOICE | flux-alexis-en | Speech output model. |
+| REPO_URL | this repository | QR destination; point it at your fork. |
+| PORT | 3000 | HTTP port (8080 in Docker). |
+| VOICE_BACKEND | deepgram | deepgram or pipecat. |
+| PIPECAT_TOKEN | required for Pipecat | Shared secret between the Python server and sidecar. |
+
+## Check your changes
+
+~~~sh
+uv run pytest -q
+~~~
+
+Tests run against a local fake Voice Agent API, without credentials or real API calls. They cover audio relay,
+barge-in, function results and cancellation, hard stop, closing deadlines, passcodes and booth isolation.
+A real voice conversation still needs a manual check with your Deepgram key.
+
+[Voice Agent docs](https://developers.deepgram.com/docs/voice-agent) ·
+[Settings reference](https://developers.deepgram.com/docs/configure-voice-agent) ·
+[Function calling](https://developers.deepgram.com/docs/voice-agents-function-calling)
+
+GitHub Actions checks the Python server and Pipecat adapter on Python 3.11–3.13,
+and builds and smoke-tests the default container without provider calls. The
+Pipecat environment has its own lockfile and offline checks:
 
 ```sh
 cd pipecat_agent
@@ -105,48 +204,5 @@ uv run ruff check .
 uv run pytest -q
 ```
 
-GitHub Actions runs JavaScript checks, Python lint and tests, and the default
-container build. Tests use fakes; a real conversation remains necessary to check
-audio, interruption, model access and voice availability.
-
-## Deploy and operate
-
-The existing container runs the **Deepgram Voice Agent API** backend:
-
-```sh
-docker build -t deepgram-voice-agent .
-docker run --rm -p 8080:8080 --env-file .env \
-  -e VOICE_BACKEND=deepgram -e BOOTH_PASSCODE=choose-a-private-passcode \
-  deepgram-voice-agent
-```
-
-Use HTTPS when opening the microphone outside localhost. Without a passcode,
-the Node server binds to loopback only. Use one application instance because
-booth state is not shared. See [deployment](docs/deployment.md) for the Python
-sidecar, reverse proxy considerations and validation steps.
-
-The app does not record audio or write transcripts to disk. The server and
-connected consoles hold conversation text in memory; the last transcript stays
-until the next call or process exit. The browser stores the booth passcode in
-local storage. Provider retention is governed by the services you configure.
-See [security](SECURITY.md) before making a demo publicly reachable.
-
-## Documentation
-
-- [Configuration reference](docs/configuration.md)
-- [Pipecat setup and limitations](docs/pipecat.md)
-- [Architecture and customization](docs/architecture.md)
-- [Deployment](docs/deployment.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Contributing](CONTRIBUTING.md)
-
-## Resources
-
-[Voice Agent API](https://developers.deepgram.com/docs/voice-agent) ·
-[Function calling](https://developers.deepgram.com/docs/voice-agents-function-calling) ·
-[Flux](https://developers.deepgram.com/docs/flux/feature-overview) ·
-[Pipecat](https://docs.pipecat.ai/)
-
-## License
-
-[MIT](LICENSE).
+See [SECURITY.md](SECURITY.md) for security boundaries and private reporting.
+[MIT licensed](LICENSE).

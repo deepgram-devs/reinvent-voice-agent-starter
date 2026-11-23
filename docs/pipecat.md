@@ -1,21 +1,10 @@
-# Run the Pipecat implementation
+# Pipecat setup
 
-This backend uses native Pipecat Flux STT and TTS services, context aggregators
-and an OpenAI-style LLM adapter for Deepgram's direct Think-Fast API. The Node
-server and existing browser interface stay in place.
+Both implementations use Python. The aiohttp server serves the shared interface;
+a private Pipecat service provides Flux STT → Think-Fast → Flux TTS. No Node runtime
+or frontend build step is required.
 
-## Requirements
-
-- Node.js 22.9+ and npm.
-- Python 3.11–3.13 and [uv](https://docs.astral.sh/uv/).
-- A Deepgram key with Flux STT, Flux TTS and **direct Think-Fast endpoint** access.
-
-Access to Think-Fast through the Voice Agent API has not been verified to imply
-access to the direct endpoint. The adapter is pinned to Pipecat 1.17.0.
-
-## Setup
-
-Run `npm ci` in the repository root and copy `.env.example` to `.env`. Set:
+Install Python 3.11–3.13 and uv. Copy `.env.example` to the repository root `.env`:
 
 ```dotenv
 DEEPGRAM_API_KEY=your-key
@@ -23,10 +12,12 @@ VOICE_BACKEND=pipecat
 PIPECAT_TOKEN=your-random-shared-secret
 ```
 
-Leave `THINK_PROVIDER=deepgram` and `THINK_MODEL=think-fast`, their defaults.
-A separate model-provider fallback is not implemented for this backend.
+The key needs Flux STT/TTS and **direct Think-Fast endpoint** access. Access through
+the Voice Agent API has not been verified to imply direct endpoint access.
+Keep `THINK_PROVIDER=deepgram` and `THINK_MODEL=think-fast`, their defaults.
+The managed-model fallback applies only to the default backend.
 
-In one terminal:
+Start the pipeline in one terminal:
 
 ```sh
 cd pipecat_agent
@@ -34,34 +25,33 @@ uv sync --frozen --python 3.12
 uv run python agent.py
 ```
 
-In a second terminal, from the repository root:
+Start the web server in another terminal from the repository root:
 
 ```sh
-npm start
+uv run python server.py
 ```
 
-Open [localhost:3000](http://localhost:3000), allow the microphone, and start a call.
-The console is at [localhost:3000/console](http://localhost:3000/console).
+Open http://localhost:3000 and allow the microphone. Use `/console` for controls.
+To switch back, set `VOICE_BACKEND=deepgram`, restart the server and stop the sidecar.
 
-To switch back, set `VOICE_BACKEND=deepgram`, restart Node and stop the Python
-service. No browser code changes are needed.
+## Behavior and extension points
 
-## Implementation boundaries
+- The pipeline listens only on `127.0.0.1:7861` and authenticates with `PIPECAT_TOKEN`.
+- Each socket owns its pipeline and in-memory context; no recorder is installed.
+- Audio is PCM16 mono: 16 kHz input and 24 kHz output.
+- Native Pipecat services handle Flux STT/TTS and context aggregation. Flux final
+  turn boundaries drive replies; eager speculative replies are disabled.
+- The LLM adapter maps chat-completion requests to `/v1/think` with `Token` auth.
+- The shared `agent_config.py` supplies the prompt and function schemas. Function
+  requests go back to `booth.py`, which calls registered `functions.py` handlers.
+  Results return to Pipecat and can generate a spoken response. `end_call` suppresses
+  that response to prevent a second goodbye.
+- Pipecat is pinned to 1.17.0. Its system-message compatibility path emits a
+  deprecation warning; migrate before version 2.
+- The default container includes only the managed backend. Run both Python
+  processes together on a host for Pipecat; see [deployment](deployment.md).
 
-- The service binds only to `127.0.0.1`; Node authenticates with `PIPECAT_TOKEN`.
-- Each socket gets its own pipeline and in-memory context.
-- The existing browser socket carries PCM16 mono audio: 16 kHz in, 24 kHz out.
-- Flux final turn detection drives replies; eager speculative replies are disabled.
-- The adapter translates SDK chat-completion requests to `/v1/think`, using
-  Deepgram `Token` authentication.
-- Pipecat tools return results without an additional LLM invocation so the agent
-  does not generate another goodbye. Add explicit follow-up behavior for tools
-  whose results need a spoken answer.
-- The compatibility path uses a system message in `LLMContext`. Pipecat currently
-  warns that this should migrate to `system_instruction` before version 2.
-- The existing Dockerfile runs only the Node backend. See [deployment](deployment.md).
-
-## Validation
+## Checks
 
 ```sh
 cd pipecat_agent
@@ -70,9 +60,6 @@ uv run ruff check .
 uv run pytest -q
 ```
 
-Tests mock provider responses and audio services. They do not establish live
-Think-Fast compatibility, account access or audible performance. Before event
-use, hear greeting, replies, barge-in, captions, QR, general/developer Wrap up
-and End on the actual hardware.
-
-Return to the [README](../README.md).
+Tests use fakes. They do not prove model access, live API compatibility, voice
+availability or audible performance. Before event use, hear greeting, replies,
+interruption, sample function lookup, QR, Finish and Stop now on actual hardware.

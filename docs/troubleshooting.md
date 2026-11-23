@@ -2,20 +2,18 @@
 
 | Symptom | Check |
 |---|---|
-| Node exits asking for a key | Copy `.env.example` to root `.env`, set `DEEPGRAM_API_KEY`, then run `npm start` from the root. |
-| Unknown `--env-file-if-exists` option | Use Node.js 22.9 or newer; `.nvmrc` selects Node 22. |
-| No microphone prompt | Open localhost or an HTTPS URL, check browser permissions, and click Set up. |
-| Another device cannot open the server | Set `BOOTH_PASSCODE`, restart Node, and check host firewall and network access. |
-| Wrong passcode | Enter the configured `BOOTH_PASSCODE`; the browser may have saved an older value. |
-| Agent fails at Start | Verify account/model access and the configured voice. Think-Fast is Early Access. |
-| Pipecat connection refused | Start `pipecat_agent/agent.py`; check `PIPECAT_PORT` and `PIPECAT_URL`. |
-| Pipecat unauthorized | Set the same nonempty `PIPECAT_TOKEN` for both processes and restart both. |
-| Pipecat provider error | Check direct Think-Fast, Flux STT and Flux TTS access. The UI intentionally omits provider response bodies. |
-| Pipecat rejects provider/model settings | Use the default `THINK_PROVIDER=deepgram` and `THINK_MODEL=think-fast`. |
-| Echo or unwanted interruptions | Test with headphones, then separate the speaker and microphone. |
-| Console controls the wrong call | Match the `?booth=...` value on the stand and console. |
-| Docker serves nothing | Set `BOOTH_PASSCODE`; without it, Node listens only inside container loopback. |
+| Missing API key | Copy root `.env.example` to `.env`, set the key and restart. |
+| No microphone | Open localhost or HTTPS, check browser permissions, then click Set up. |
+| Remote device cannot connect | Set `BOOTH_PASSCODE`, restart, and check firewall/network access. |
+| Wrong passcode | Re-enter the configured value; local storage may contain an old value. |
+| Agent fails at Start | Check your key's access to all configured speech/reply models. |
+| Pipecat connection refused | Start the sidecar and match `PIPECAT_URL` with `PIPECAT_PORT`. |
+| Pipecat unauthorized | Both processes need the same nonempty `PIPECAT_TOKEN`. |
+| Pipecat provider error | Verify direct Think-Fast and Flux STT/TTS access; managed-model access may differ. |
+| Pipecat settings rejected | Use `THINK_PROVIDER=deepgram` and `THINK_MODEL=think-fast`. |
+| Echo or false interruptions | Begin with headphones, then separate speaker and microphone. |
+| Wrong console call | Match `?booth=...` on both pages. |
+| Container inaccessible | Set `BOOTH_PASSCODE` so the server listens outside container loopback. |
 
-For a bug report, include the backend, runtime versions, browser, operating system,
-steps and a sanitized error. Do not include API keys, `.env`, visitor audio or
-conversation transcripts. See [contributing](../CONTRIBUTING.md).
+Report backend, runtime/browser versions, sanitized errors and reproduction steps.
+Never include credentials, `.env`, visitor audio or transcripts.

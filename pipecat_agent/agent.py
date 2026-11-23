@@ -102,6 +102,7 @@ class SocketOutput(FrameProcessor):
 class Conversation:
     def __init__(self, ws):
         self.ws, self.worker, self.runner_task, self.llm = ws, None, None, None
+        self.pending_tools = {}
 
     async def send(self, kind, **fields):
         if not self.ws.closed:
@@ -121,7 +122,7 @@ class Conversation:
                    for f in agent["think"]["functions"]],
         )
         self.llm = ThinkFastLLMService(api_key=key, settings=OpenAILLMService.Settings(model="think-fast"))
-        for name in ("show_code", "end_call"):
+        for name in (f["name"] for f in agent["think"]["functions"]):
             self.llm.register_function(name, self.tool)
         stt = DeepgramFluxSTTService(api_key=key, sample_rate=16000,
                                     settings=DeepgramFluxSTTService.Settings(model="flux-general-en"))
@@ -163,13 +164,30 @@ class Conversation:
             await self.ws.close()
 
     async def tool(self, params):
-        await self.send("FunctionCallRequest", functions=[{
-            "id": params.tool_call_id, "name": params.function_name,
-            "arguments": params.arguments, "client_side": True,
-        }])
-        # These screen/lifecycle tools need no spoken follow-up. Avoid a second
-        # goodbye; persist a tool result so the next user turn has valid history.
-        await params.result_callback("Done", properties=FunctionCallResultProperties(run_llm=False))
+        future = asyncio.get_running_loop().create_future()
+        self.pending_tools[params.tool_call_id] = future
+        try:
+            await self.send("FunctionCallRequest", functions=[{
+                "id": params.tool_call_id, "name": params.function_name,
+                "arguments": params.arguments, "client_side": True,
+            }])
+            if params.function_name == "end_call":
+                # The shared Booth closes after the goodbye; no second reply.
+                result, run_llm = "Done", False
+            else:
+                # Booth validates arguments and calls the same registered Python
+                # handlers used by the managed Voice Agent API implementation.
+                try:
+                    result = await asyncio.wait_for(future, timeout=8)
+                except TimeoutError:
+                    result = '{"error":"The function timed out. Do not invent a result."}'
+                run_llm = True
+            await params.result_callback(result, properties=FunctionCallResultProperties(run_llm=run_llm))
+        except asyncio.CancelledError:
+            await self.send("FunctionCallCancelled", functions=[{"id": params.tool_call_id}])
+            raise
+        finally:
+            self.pending_tools.pop(params.tool_call_id, None)
 
     async def command(self, msg):
         kind = msg.get("type")
@@ -177,14 +195,18 @@ class Conversation:
             if self.worker:
                 raise ValueError("Settings already applied")
             await self.start(msg)
-        elif kind in ("KeepAlive", "FunctionCallResponse"):
+        elif kind == "FunctionCallResponse":
+            future = self.pending_tools.get(msg.get("id"))
+            if future is not None and not future.done():
+                future.set_result(msg.get("content", "{}"))
+        elif kind == "KeepAlive":
             return
         elif not self.worker:
             raise ValueError("Send Settings first")
         elif kind == "UpdatePrompt":
             # Add instructions without discarding the original identity or history.
             messages = self.context.get_messages()
-            messages[0]["content"] += "\n\n" + msg["prompt"]
+            messages[0]["content"] = msg["prompt"]
             await self.send("PromptUpdated")
         elif kind == "InjectUserMessage":
             await self.send("ConversationText", role="user", content=msg["content"])

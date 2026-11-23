@@ -13,14 +13,13 @@ channel before disclosing details. This repository does not promise a response S
 ## Current boundaries
 
 - Provider credentials stay server-side. `.env` is excluded from Git and Docker.
-- Without `BOOTH_PASSCODE`, Node binds to loopback. With it, both browser sockets
+- Without `BOOTH_PASSCODE`, The Python server binds to loopback. With it, both browser sockets
   require the shared passcode. Static pages remain public.
 - The shared browser passcode is stored in local storage and carried in socket
   query strings. Use HTTPS and avoid query-string logging at proxies.
 - The Python service is loopback-only and requires a separate `PIPECAT_TOKEN`.
 - Audio and transcripts are processed in memory, without application recording.
-  Consoles receive transcripts; the latest conversation remains in server memory
-  until the next call or process exit. Providers have their own retention policies.
+  Consoles receive transcripts during the call; server history clears when the call ends. Providers have their own retention policies.
 - There is no per-user authorization, rate limiting or spending quota. A shared
   passcode is not a substitute for these controls in a public product.
 

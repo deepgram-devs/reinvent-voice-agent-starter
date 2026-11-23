@@ -1,33 +1,25 @@
 # Contributing
 
-Use an issue for a bug or proposed feature, or open a pull request with a focused
-change. For sensitive reports, follow [SECURITY.md](SECURITY.md).
-
-## Local setup
-
-Follow the [README](README.md). Use Node 22 (`nvm use` if you use nvm). For Python,
-use the checked-in uv lockfile and Python 3.12 as described in the Pipecat guide.
-Keep `.env` local and use placeholder credentials in tests.
-
-## Checks
+Follow the [README](README.md) to run the Python starter. No Node runtime is needed
+for the app; Node 22+ is optional for the inherited browser check in `tests/browser.mjs`.
 
 ```sh
-npm ci
-npm run check
+uv sync --frozen --group dev
+uv run pytest -q
 cd pipecat_agent
 uv sync --frozen --group dev --python 3.12
 uv run ruff check .
 uv run pytest -q
 ```
 
-Tests must run offline with fakes. Do not add a test that opens a paid provider
-session, records visitor data or depends on a shared server. If you change the
-prompt, audio transport or closing flow, describe the real conversation you heard,
-or clearly identify that validation as outstanding.
+Keep tests offline with fake provider responses. Never commit API keys, `.env`,
+visitor audio or transcripts. A prompt/audio change needs a real conversation
+check, or a clear statement that it remains outstanding.
 
-Keep both backends' documentation accurate. A function added to the shared schema
-needs a handler in each backend that advertises it. Keep dependencies and lockfiles
-in sync (`npm install --package-lock-only` or `uv lock` in `pipecat_agent/`).
+Keep both implementations and their documentation consistent. Add business
+functions through `functions.py` so both backends share handlers. Update the
+relevant lockfile with `uv lock` when dependencies change. Before a PR, review
+`git diff --check` and the staged diff for secrets or visitor data.
 
-Before opening a PR, review `git diff --check` and the staged diff for credentials
-or visitor data. Describe the resulting behavior, relevant checks and limitations.
+Describe the problem, resulting behavior, checks and material limitations in the
+PR. Follow [SECURITY.md](SECURITY.md) for private vulnerability reporting.
