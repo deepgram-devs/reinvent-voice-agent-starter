@@ -1,4 +1,6 @@
 .env
 .git
-node_modules
-test
+.venv
+__pycache__
+.pytest_cache
+tests

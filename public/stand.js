@@ -75,7 +75,9 @@ function caption(role, text) {
 // ---- the server ----------------------------------------------------------------------------------------------------
 
 const server = connect("stand", {
-  onstatus(up) { if (!up && !call) setState("idle", "Offline"); },
+  onstatus(up) {
+    if (!up) { call = live = false; flush(); clearInterval(drainTimer); body.dataset.call = "off"; $("go").textContent = "Start"; setState("idle", "Offline"); }
+  },
   onjson(msg) {
     switch (msg.type) {
       case "hello":
@@ -107,6 +109,9 @@ const server = connect("stand", {
         call = live = false;
         clearInterval(drainTimer);
         flush();
+        clearTimeout(ccTimer);
+        $("ccuser").textContent = $("ccagent").textContent = "";
+        $("ccuser").classList.add("gone"); $("ccagent").classList.add("gone");
         body.dataset.call = "off";
         $("go").textContent = "Start";
         setState("idle", "Ready");
@@ -115,7 +120,7 @@ const server = connect("stand", {
       case "replaced": break;
     }
   },
-  onbinary: play,
+  onbinary: (buffer) => { if (call) play(buffer); },
   onrefused() {
     $("setup").classList.remove("hidden");
     $("pass").classList.remove("hidden");
