@@ -55,7 +55,7 @@ def settings():
                     "type": os.getenv("THINK_PROVIDER", "deepgram"),
                     "model": os.getenv("THINK_MODEL", "think-fast"),
                 },
-                "prompt": PROMPT,
+                "prompt": configured_prompt(),
                 "functions": FUNCTIONS,
             },
             "speak": {"provider": {
@@ -64,3 +64,13 @@ def settings():
             "greeting": GREETING,
         },
     }
+
+
+def configured_prompt():
+    """Describe the backend that actually runs, including closing instructions."""
+    if os.getenv("VOICE_BACKEND", "deepgram") == "pipecat":
+        return PROMPT.replace(
+            "You use the Deepgram Voice Agent API:",
+            "You use a Python Pipecat pipeline:",
+        )
+    return PROMPT

@@ -1,0 +1,30 @@
+name: Bug report
+description: Report a reproducible problem with the starter.
+body:
+  - type: markdown
+    attributes:
+      value: Do not include API keys, .env files, visitor audio or transcripts. Use SECURITY.md for sensitive reports.
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Backend
+      options:
+        - Deepgram Voice Agent API
+        - Pipecat
+        - Shared interface or setup
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include expected behavior and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and sanitized error
+      description: OS, browser, Node/Python versions and relevant configuration names. Remove all secret values.
+    validations:
+      required: true

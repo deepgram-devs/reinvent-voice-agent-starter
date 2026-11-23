@@ -13,7 +13,8 @@ from dotenv import load_dotenv
 import qrcode
 import qrcode.image.svg
 
-from booth import AGENT_URL, Booth, Peer, booth_id
+from booth import Booth, Peer, booth_id
+from backend import connection_options
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
@@ -34,6 +35,7 @@ def create_app(*, key=None, passcode=None, repo_url=None, connect=None):
     svg = io.BytesIO()
     qr.save(svg)
     booths = {}
+    endpoint, headers = connection_options(key) if connect is None else (None, None)
     upstream = connect
     app = web.Application(client_max_size=1 << 20)
 
@@ -43,7 +45,7 @@ def create_app(*, key=None, passcode=None, repo_url=None, connect=None):
         async with aiohttp.ClientSession(timeout=timeout) as client:
             if upstream is None:
                 upstream = lambda: client.ws_connect(
-                    AGENT_URL, headers={"Authorization": f"Token {key}"},
+                    endpoint, headers=headers,
                     heartbeat=20, max_msg_size=4 << 20,
                 )
             yield

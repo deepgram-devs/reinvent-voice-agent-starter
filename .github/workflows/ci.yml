@@ -1,0 +1,41 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  python:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        python: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --group dev --python ${{ matrix.python }}
+      - run: uv run pytest -q
+      - run: uv sync --project pipecat_agent --frozen --group dev --python ${{ matrix.python }}
+      - run: uv run --project pipecat_agent ruff check pipecat_agent
+      - run: uv run --project pipecat_agent pytest -q pipecat_agent
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t deepgram-voice-agent:ci .
+      - name: Smoke test without provider calls
+        run: >-
+          docker run --rm -i
+          -e DEEPGRAM_API_KEY=offline-test-key
+          -e BOOTH_PASSCODE=test-passcode
+          -e VOICE_BACKEND=deepgram
+          deepgram-voice-agent:ci python - < tests/container_smoke.py

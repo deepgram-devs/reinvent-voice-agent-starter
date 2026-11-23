@@ -1,7 +1,7 @@
-# Python voice agent starter
+# Deepgram Voice Agent Starter
 
 Take the voice experience from Deepgram's re:Invent booth and tailor it to your project. This starter uses the same
-**Python + asyncio + aiohttp** approach for its server, and the same core Deepgram Voice Agent API flow:
+**Python + asyncio + aiohttp** approach for its server, and the core voice flow, with either the managed Deepgram Voice Agent API or a local Pipecat pipeline:
 
 **microphone → Flux speech-to-text → Think-Fast → Flux text-to-speech → speaker**
 
@@ -11,6 +11,21 @@ or JavaScript build step is needed**.
 
 The live conference booth has additional orchestration, a graph and documentation tools. Start here to build your
 own voice task with the same core APIs; add the integrations your product needs.
+
+## Choose your implementation
+
+| Backend | Set `VOICE_BACKEND` | Runtime | Reply model |
+|---|---|---|---|
+| Deepgram Voice Agent API (default) | `deepgram` | Python aiohttp server | Think-Fast or a configured managed model |
+| Pipecat | `pipecat` | Python aiohttp server + local Python pipeline | Direct Think-Fast endpoint |
+
+Both use the same browser interface, console, Python configuration and business
+function handlers. Start with the default below, or follow the [Pipecat setup](docs/pipecat.md).
+Pipecat is experimental until direct model access and a real conversation are verified.
+
+[Configuration](docs/configuration.md) · [Architecture](docs/architecture.md) ·
+[Deployment](docs/deployment.md) · [Troubleshooting](docs/troubleshooting.md) ·
+[Contributing](CONTRIBUTING.md)
 
 ## Run it
 
@@ -115,7 +130,7 @@ Console -- Start / Finish / Stop / QR -------+
 ~~~
 
 Like the live booth, the Python server owns the upstream WebSocket and keeps the API key out of the browser.
-This small starter lets Deepgram manage the Think-Fast invocation. The conference booth additionally uses its
+The default backend lets Deepgram manage the Think-Fast invocation. The optional Pipecat backend calls Think-Fast directly. The conference booth additionally uses its
 own Python think endpoint for orchestration; this starter does not reproduce the booth's entire application.
 
 ## Console and closing
@@ -161,6 +176,8 @@ For a public deployment, add your application's authentication, abuse controls a
 | VOICE | flux-alexis-en | Speech output model. |
 | REPO_URL | this repository | QR destination; point it at your fork. |
 | PORT | 3000 | HTTP port (8080 in Docker). |
+| VOICE_BACKEND | deepgram | deepgram or pipecat. |
+| PIPECAT_TOKEN | required for Pipecat | Shared secret between the Python server and sidecar. |
 
 ## Check your changes
 
@@ -176,4 +193,16 @@ A real voice conversation still needs a manual check with your Deepgram key.
 [Settings reference](https://developers.deepgram.com/docs/configure-voice-agent) ·
 [Function calling](https://developers.deepgram.com/docs/voice-agents-function-calling)
 
-MIT licensed.
+GitHub Actions checks the Python server and Pipecat adapter on Python 3.11–3.13,
+and builds and smoke-tests the default container without provider calls. The
+Pipecat environment has its own lockfile and offline checks:
+
+```sh
+cd pipecat_agent
+uv sync --frozen --group dev --python 3.12
+uv run ruff check .
+uv run pytest -q
+```
+
+See [SECURITY.md](SECURITY.md) for security boundaries and private reporting.
+[MIT licensed](LICENSE).

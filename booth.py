@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 
 from aiohttp import WSMsgType
 
-from agent_config import CLOSING_PROMPT, PROMPT, settings
+from agent_config import CLOSING_PROMPT, configured_prompt, settings
 from functions import HANDLERS
 
 AGENT_URL = "wss://agent.deepgram.com/v1/agent/converse"
@@ -349,7 +349,7 @@ class Booth:
         if call is None or not call.live or call.close_at is not None:
             return
         call.close_at = time.monotonic()
-        await call.agent.send_json({"type": "UpdatePrompt", "prompt": PROMPT + "\n\n" + CLOSING_PROMPT})
+        await call.agent.send_json({"type": "UpdatePrompt", "prompt": configured_prompt() + "\n\n" + CLOSING_PROMPT})
         self.status()
 
     async def _tick(self, call):
