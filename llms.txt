@@ -1,0 +1,34 @@
+# Deepgram Voice Agent Starter
+
+> Python browser voice-agent starter with a managed Deepgram Voice Agent API backend and an optional local Pipecat backend. Both share prompts, business-function handlers, the browser interface and operator console.
+
+## Start here
+
+- [README](README.md): Prerequisites, quick start, backend comparison and customization.
+- [Coding agent guide](AGENTS.md): Repository rules, source ownership and validation commands.
+- [Configuration](docs/configuration.md): Environment variables and defaults.
+- [Architecture](docs/architecture.md): Data flow and extension points.
+
+## Backend and operations guides
+
+- [Pipecat](docs/pipecat.md): Separate Python environment, setup and current limitations.
+- [Deployment](docs/deployment.md): Container, HTTPS, process and network boundaries.
+- [Troubleshooting](docs/troubleshooting.md): Common setup and runtime problems.
+- [Contributing](CONTRIBUTING.md): Development checks and change submission.
+- [Security](SECURITY.md): Credentials, data handling and vulnerability reporting.
+
+## Primary source files
+
+- [Agent configuration](agent_config.py): Prompt, greeting, model settings and function schemas.
+- [Business functions](functions.py): Shared async handler registry and fictional example data.
+- [Call lifecycle](booth.py): Audio relay, cancellation, tools and closing.
+- [Server](server.py): HTTP routes, WebSockets and authentication.
+- [Backend selection](backend.py): Managed provider or local Pipecat connection.
+- [Pipecat implementation](pipecat_agent/agent.py): Pipeline and direct Think-Fast adapter.
+
+## Verification
+
+- [Server tests](tests/test_starter.py): Offline fake-provider coverage.
+- [Backend tests](tests/test_backend.py): Backend selection and configuration checks.
+- [Pipecat tests](pipecat_agent/test_agent.py): Offline pipeline, adapter and tool checks.
+- [CI workflow](.github/workflows/ci.yml): Automated checks and container validation.
