@@ -1,0 +1,17 @@
+name: Feature request
+description: Propose an improvement to the starter.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to build?
+      description: Describe the use case and the limitation you encountered.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include which backend it affects and any alternatives considered.
+    validations:
+      required: true

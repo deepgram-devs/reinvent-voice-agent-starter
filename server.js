@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
 import QRCode from "qrcode";
 import { Booth, boothId, passcodeOk } from "./booth.js";
+import { agentConnection } from "./backend.js";
 
 const PORT = Number(process.env.PORT || 3000);
 const KEY = process.env.DEEPGRAM_API_KEY;
@@ -34,10 +35,11 @@ if (!KEY) {
 }
 
 const qrSvg = await QRCode.toString(REPO_URL, { type: "svg", margin: 0, errorCorrectionLevel: "M" });
+const connect = agentConnection(KEY);
 const booths = new Map();
 
 function booth(id) {
-  if (!booths.has(id)) booths.set(id, new Booth(id, { key: KEY }));
+  if (!booths.has(id)) booths.set(id, new Booth(id, { key: KEY, connect }));
   return booths.get(id);
 }
 

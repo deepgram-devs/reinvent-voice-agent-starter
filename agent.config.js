@@ -100,7 +100,10 @@ export function settings({ role = "general" } = {}) {
       listen: { provider: { type: "deepgram", version: "v2", model: "flux-general-en" } },
       think: {
         provider: { type: THINK_PROVIDER, model: THINK_MODEL },
-        prompt: `${PROMPT}\n\nThe visitor: ${brief}`,
+        prompt: `${process.env.VOICE_BACKEND === "pipecat" ? PROMPT.replace(
+          "You run on Deepgram's Voice Agent API: one WebSocket that listens, thinks and speaks.",
+          "You run on Pipecat, which connects Deepgram Flux recognition, an LLM and Flux speech synthesis."
+        ) : PROMPT}\n\nThe visitor: ${brief}`,
         functions: FUNCTIONS,
       },
       // Flux TTS: the voice. Other voices: https://developers.deepgram.com/docs/tts-models

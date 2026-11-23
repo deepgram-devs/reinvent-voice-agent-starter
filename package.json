@@ -1,7 +1,7 @@
 {
   "name": "reinvent-voice-agent-starter",
   "version": "1.0.0",
-  "description": "Deepgram's re:Invent booth voice agent: a booth screen, an operator console and a small Node server on the Voice Agent API.",
+  "description": "Browser voice agent starter with Deepgram Voice Agent API and Pipecat implementations.",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -9,10 +9,20 @@
   },
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "check": "node scripts/check.mjs && npm test"
   },
   "dependencies": {
     "qrcode": "1.5.4",
     "ws": "8.22.1"
-  }
+  },
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepgram-devs/reinvent-voice-agent-starter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/deepgram-devs/reinvent-voice-agent-starter/issues"
+  },
+  "homepage": "https://github.com/deepgram-devs/reinvent-voice-agent-starter#readme"
 }

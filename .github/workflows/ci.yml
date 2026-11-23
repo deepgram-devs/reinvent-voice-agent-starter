@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  javascript:
+    name: JavaScript / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+
+  python:
+    name: Pipecat / Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        python: ['3.11', '3.12', '3.13']
+    defaults:
+      run:
+        working-directory: pipecat_agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: pipecat_agent/uv.lock
+      - run: uv sync --frozen --group dev --python ${{ matrix.python }}
+      - run: uv run ruff check .
+      - run: uv run pytest -q
+
+  container:
+    name: Voice Agent container
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t deepgram-voice-agent:ci .
+      - name: Smoke test container without provider calls
+        run: >-
+          docker run --rm -i
+          -e DEEPGRAM_API_KEY=offline-test-key
+          -e BOOTH_PASSCODE=test-passcode
+          -e VOICE_BACKEND=deepgram
+          deepgram-voice-agent:ci node --input-type=module -
+          < scripts/smoke-container.mjs
