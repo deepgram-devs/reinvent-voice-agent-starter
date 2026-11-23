@@ -1,0 +1,15 @@
+[project]
+name = "reinvent-voice-agent-starter"
+version = "2.0.0"
+description = "A small Python voice agent, booth screen and console using Deepgram's Voice Agent API."
+requires-python = ">=3.11"
+dependencies = ["aiohttp>=3.12,<4", "python-dotenv>=1,<2", "qrcode>=8,<9"]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "pytest-asyncio>=0.24,<2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

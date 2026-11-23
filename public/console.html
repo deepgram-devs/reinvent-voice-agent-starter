@@ -13,7 +13,7 @@
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 var(--sans); padding:16px; }
   main { max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:14px; }
-  header { display:flex; align-items:center; gap:14px; }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:14px; }
   #num { font:700 44px/1 var(--sans); color:var(--magenta); min-width:1ch; }
   header h1 { margin:0; font-size:22px; }
   #sub { color:var(--muted); font:13px var(--mono); }
@@ -57,10 +57,8 @@
 
   <section>
     <h2>Conversation</h2>
-    <label for="role">Who is at the booth</label>
-    <select id="role"></select>
-    <div class="row"><button class="go" id="start">Start</button><button id="stop">End</button></div>
-    <button class="wrap" id="wrap">Wrap up</button>
+    <div class="row"><button class="go" id="start">Start</button><button id="stop">Stop now</button></div>
+    <button class="wrap" id="wrap">Finish</button>
   </section>
 
   <section>
